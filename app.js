@@ -2,7 +2,6 @@
 const firebaseConfig = {
     apiKey: "AIzaSyBVP3ZOpwIh5rtCFLufaQCI3JLVNEgWUhI",
     authDomain: "healthpetapp-8f789.firebaseapp.com",
-    // QUAN TRỌNG: URL dành cho region Singapore
     databaseURL: "https://healthpetapp-8f789-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "healthpetapp-8f789",
     storageBucket: "healthpetapp-8f789.firebasestorage.app",
@@ -17,9 +16,7 @@ if (!firebase.apps.length) {
 const auth = firebase.auth();
 const db = firebase.database();
 
-// ============================================================
 // 2. DỮ LIỆU CỐ ĐỊNH & GAMIFICATION
-// ============================================================
 
 const ZODIAC_ANIMALS = [
     { name: "Khỉ (Thân)", icon: "fa-cat" }, { name: "Gà (Dậu)", icon: "fa-crow" },
@@ -80,9 +77,7 @@ const VISION_LEVELS = [
     { size: '30px', score: 6 }, { size: '15px', score: 8 }, { size: '10px', score: 10 }
 ];
 
-// ============================================================
 // 3. QUẢN LÝ ĐĂNG NHẬP
-// ============================================================
 
 auth.onAuthStateChanged((user) => {
     if (user) {
@@ -108,9 +103,7 @@ if(btnLogin) btnLogin.addEventListener('click', () => {
 const btnLogout = document.getElementById('logout-btn');
 if(btnLogout) btnLogout.addEventListener('click', () => auth.signOut());
 
-// ============================================================
 // 4. LOGIC DỮ LIỆU USER (LOAD & SAVE)
-// ============================================================
 
 function loadUserData() {
     if (!currentUser) return;
@@ -137,33 +130,26 @@ function loadUserData() {
     }).catch(err => alert("Lỗi tải data: " + err.message));
 }
 
-// Hàm mở Modal cài đặt (Dùng cho cả lúc mới tạo và lúc sửa)
 function openSetupModal(isForce = false) {
     const modalEl = document.getElementById('setupModal');
     const closeBtn = document.getElementById('btn-close-setup');
     
-    // Nếu bắt buộc (isForce = true) -> Ẩn nút đóng. Ngược lại -> Hiện nút đóng.
     if (closeBtn) {
         closeBtn.style.display = isForce ? 'none' : 'block';
     }
 
-    // Nếu force thì không cho bấm ra ngoài để tắt (static)
     const options = isForce ? { backdrop: 'static', keyboard: false } : {};
     new bootstrap.Modal(modalEl, options).show();
 }
 
-// --- HÀM MỚI: Mở modal để sửa hồ sơ (Gắn vào nút Bánh răng) ---
 function openEditProfile() {
     if (!userData) return;
 
-    // 1. Điền thông tin cũ vào ô nhập liệu để người dùng sửa
     document.getElementById('inp-name').value = userData.name || "";
     document.getElementById('inp-year').value = userData.birthYear || "";
-    // Lưu ý: Trong DB lưu mét, nhưng nhập vào là cm nên phải nhân 100
+    
     document.getElementById('inp-height').value = (userData.height * 100) || ""; 
     document.getElementById('inp-weight').value = userData.startWeight || "";
-
-    // 2. Mở Modal (false = cho phép tắt modal nếu không muốn sửa nữa)
     openSetupModal(false);
 }
 
@@ -235,9 +221,7 @@ function checkPenalty() {
     }
 }             
 
-// ============================================================
 // 5. RENDER GIAO DIỆN (UI)
-// ============================================================
 
 function renderUI() {
     if (!userData || userData.petType === undefined) return;
@@ -301,9 +285,7 @@ function renderExercises() {
     });
 }
 
-// ============================================================
-// 6. LOGIC TẬP LUYỆN (WORKOUT)
-// ============================================================
+// 6. LOGIC TẬP LUYỆN 
 
 function openWorkout(id) {
     currentEx = EXERCISES.find(e => e.id === id);
@@ -380,9 +362,7 @@ function addXP(amount) {
     }
 }
 
-// ============================================================
 // 7. LOGIC KIỂM TRA SỨC KHỎE (HEALTH CHECK)
-// ============================================================
 
 function openHealthCheck() {
     healthData = { visionScore: 0, pushups: 0, lungTime: 0 };
@@ -484,4 +464,5 @@ function goToStep(stepId) {
         document.getElementById(id).classList.add('d-none');
     });
     document.getElementById(stepId).classList.remove('d-none');
+
 }
