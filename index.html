@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zodiac Fit - Pet Đồng Hành</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Nunito', sans-serif; background-color: #f0f2f5; }
+        .app-container { max-width: 600px; margin: 0 auto; min-height: 100vh; background: white; position: relative; }
+        
+        /* Pet Animation */
+        .pet-icon { transition: all 0.5s; }
+        .pet-bounce { animation: bounce 2s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        
+        /* Level & XP Bar */
+        .xp-container { height: 10px; background: #e9ecef; border-radius: 10px; overflow: hidden; margin-top: 10px; }
+        .xp-bar { height: 100%; background: linear-gradient(90deg, #ffc107, #ff9800); width: 0%; transition: width 0.5s; }
+
+        .workout-card { 
+            background: white; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+            transition: transform 0.2s; cursor: pointer; border: 1px solid #eee;
+        }
+        .workout-card:hover { transform: translateY(-3px); border-color: #28a745; }
+        
+        /* Vision Test Box */
+        .vision-box { min-height: 200px; display: flex; align-items: center; justify-content: center; background: #f8f9fa; border: 2px dashed #dee2e6; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container shadow-lg">
+        
+        <div id="auth-screen" class="d-flex flex-column align-items-center justify-content-center h-100 p-4" style="min-height: 100vh;">
+            <i class="fas fa-paw fa-5x text-success mb-3"></i>
+            <h1 class="fw-bold text-success mb-4">Zodiac Fit</h1>
+            <p class="text-muted text-center mb-5">Biến việc tập luyện thành trò chơi nuôi thú.<br>Pet khỏe khi bạn khỏe!</p>
+            <button id="google-login-btn" class="btn btn-outline-dark btn-lg w-100 rounded-pill">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" class="me-2">
+                Đăng nhập với Google
+            </button>
+        </div>
+
+        <div id="app-screen" class="d-none">
+           <div class="bg-success text-white p-3 d-flex justify-content-between align-items-center">
+    <span class="fw-bold"><i class="fas fa-paw"></i> Zodiac Fit</span>
+    <div>
+        <button class="btn btn-sm btn-outline-light me-2" onclick="openEditProfile()">
+            <i class="fas fa-cog"></i> Sửa
+        </button>
+        <button id="logout-btn" class="btn btn-sm btn-light text-success fw-bold">Thoát</button>
+    </div>
+</div>
+
+            <div class="p-3">
+                <div class="card border-0 shadow-sm bg-light mb-4">
+                    <div class="card-body text-center pt-4">
+                        <span id="bmi-badge" class="badge bg-secondary position-absolute top-0 end-0 m-3">BMI: --</span>
+                        
+                        <div class="mb-3">
+                            <i id="pet-icon" class="fas fa-cat fa-6x text-secondary pet-bounce"></i>
+                        </div>
+                        
+                        <h3 class="fw-bold mb-0" id="pet-name-display">...</h3>
+                        <div id="pet-status-text" class="text-muted small mb-2">Đang tải...</div>
+
+                        <div class="px-4">
+                            <div class="d-flex justify-content-between small fw-bold text-muted">
+                                <span id="lvl-display">LV.1</span>
+                                <span id="xp-text">0/100 XP</span>
+                            </div>
+                            <div class="xp-container">
+                                <div id="xp-bar" class="xp-bar"></div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-4 text-center">
+                            <div class="col-4 border-end">
+                                <h5 class="fw-bold mb-0 text-primary" id="streak-days">0</h5>
+                                <small class="text-muted">Chuỗi ngày</small>
+                            </div>
+                            <div class="col-4 border-end">
+                                <h5 class="fw-bold mb-0 text-danger" id="total-minutes">0</h5>
+                                <small class="text-muted">Phút tập</small>
+                            </div>
+                            <div class="col-4">
+                                <h5 class="fw-bold mb-0 text-success" id="user-weight">--</h5>
+                                <small class="text-muted">Kg (Bạn)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-12">
+                        <button class="btn btn-success w-100 p-3 shadow-sm d-flex align-items-center justify-content-between" onclick="openHealthCheck()">
+                            <div class="text-start">
+                                <h6 class="fw-bold mb-0"><i class="fas fa-user-md me-2"></i>Kiểm tra Sức khỏe</h6>
+                                <small class="text-white-50">Đo thị lực • Hít đất • Phổi</small>
+                            </div>
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+
+                    <div class="col-12">
+                        <h6 class="fw-bold text-muted mt-2"><i class="fas fa-dumbbell"></i> Giáo án Tập luyện</h6>
+                    </div>
+
+                    <div id="exercise-list" class="row g-3">
+                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="setupModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">👋 Chào mừng bạn mới!</h5>
+                    <button type="button" class="btn-close" id="btn-close-setup" data-bs-dismiss="modal" style="display:none"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Hãy nhập thông tin để chúng mình chọn Pet phù hợp nhé.</p>
+                    <div class="mb-3">
+                        <label>Tên hiển thị</label>
+                        <input type="text" id="inp-name" class="form-control" placeholder="Ví dụ: Minh Hiếu">
+                    </div>
+                    <div class="mb-3">
+                        <label>Năm sinh (Để chọn Linh vật)</label>
+                        <input type="number" id="inp-year" class="form-control" placeholder="2003">
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label>Chiều cao (cm)</label>
+                            <input type="number" id="inp-height" class="form-control" placeholder="170">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label>Cân nặng (kg)</label>
+                            <input type="number" id="inp-weight" class="form-control" placeholder="65">
+                        </div>
+                    </div>
+                    <button class="btn btn-success w-100 rounded-pill fw-bold" onclick="saveUserProfile()">Hoàn tất & Nhận Pet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="workoutModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-center">
+                <div class="modal-body p-4">
+                    <span class="badge bg-warning text-dark mb-2" id="ex-badge">-- XP</span>
+                    <h4 class="fw-bold" id="ex-title">Tên bài tập</h4>
+                    <img id="ex-img" src="" class="img-fluid rounded my-3" style="max-height: 200px;">
+                    <p class="text-muted" id="ex-desc">...</p>
+                    
+                    <div class="display-1 fw-bold text-success my-3" id="timer-display">00:00</div>
+                    
+                    <button id="btn-action" class="btn btn-primary btn-lg w-100 rounded-pill">Bắt đầu tập</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="healthCheckModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-stethoscope"></i> Phòng khám Pet</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    
+                    <div id="step-vision">
+                        <h6 class="text-muted mb-3">Bước 1/3: Kiểm tra Thị lực</h6>
+                        <div class="alert alert-warning small"><i class="fas fa-info-circle"></i> Để máy xa mắt 40cm.</div>
+                        <div class="vision-box mb-3">
+                            <h1 id="vision-char" style="font-size: 80px; margin:0; user-select: none;">E</h1>
+                        </div>
+                        <p class="small text-muted">Bạn có thấy rõ chữ cái trên không?</p>
+                        <button class="btn btn-outline-danger me-2" onclick="visionFail()">❌ Mờ</button>
+                        <button class="btn btn-primary" onclick="visionPass()">✅ Rõ nét</button>
+                    </div>
+
+                    <div id="step-strength" class="d-none">
+                        <h6 class="text-muted mb-3">Bước 2/3: Thể lực (Hít đất)</h6>
+                        <img src="https://media.giphy.com/media/KHM1e9f1a0T8k/giphy.gif" class="rounded mb-3" width="100">
+                        <p>Làm hết sức có thể nhé! Nhập số cái:</p>
+                        <input type="number" id="inp-pushup" class="form-control mb-3 text-center fs-4" placeholder="0">
+                        <button class="btn btn-primary w-100" onclick="submitStrength()">Tiếp tục</button>
+                    </div>
+
+                    <div id="step-lung" class="d-none">
+                        <h6 class="text-muted mb-3">Bước 3/3: Dung tích Phổi</h6>
+                        <p>Hít sâu và giữ hơi lâu nhất có thể!</p>
+                        <div class="display-1 fw-bold text-success my-3" id="lung-timer">00.00</div>
+                        <button id="btn-lung-action" class="btn btn-success btn-lg w-100" onclick="toggleLungTest()">Bắt đầu nín thở</button>
+                        <button class="btn btn-primary w-100 mt-2 d-none" id="btn-lung-next" onclick="finishHealthCheck()">Xem kết quả</button>
+                    </div>
+
+                    <div id="step-result" class="d-none">
+                        <h3 class="fw-bold text-success">KẾT QUẢ</h3>
+                        <ul class="list-group list-group-flush text-start mb-3">
+                            <li class="list-group-item d-flex justify-content-between"><span>👁️ Mắt:</span> <strong id="res-vision">--</strong></li>
+                            <li class="list-group-item d-flex justify-content-between"><span>💪 Hít đất:</span> <strong id="res-strength">--</strong></li>
+                            <li class="list-group-item d-flex justify-content-between"><span>🫁 Phổi:</span> <strong id="res-lung">--</strong></li>
+                        </ul>
+                        <div class="alert alert-info" id="health-advice">...</div>
+                        <button class="btn btn-dark w-100" data-bs-dismiss="modal">Đóng & Lưu</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
