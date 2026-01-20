@@ -1,4 +1,3 @@
-// --- 1. CẤU HÌNH FIREBASE ---
 const firebaseConfig = {
     apiKey: "AIzaSyBVP3ZOpwIh5rtCFLufaQCI3JLVNEgWUhI",
     authDomain: "healthpetapp-8f789.firebaseapp.com",
@@ -16,15 +15,16 @@ if (!firebase.apps.length) {
 const auth = firebase.auth();
 const db = firebase.database();
 
+
 // 2. DỮ LIỆU CỐ ĐỊNH & GAMIFICATION
 
 const ZODIAC_ANIMALS = [
-    { name: "Khỉ (Thân)", icon: "fa-cat" }, { name: "Gà (Dậu)", icon: "fa-crow" },
-    { name: "Chó (Tuất)", icon: "fa-dog" }, { name: "Heo (Hợi)", icon: "fa-piggy-bank" },
-    { name: "Chuột (Tý)", icon: "fa-mouse" }, { name: "Trâu (Sửu)", icon: "fa-hippo" },
-    { name: "Hổ (Dần)", icon: "fa-cat" }, { name: "Mèo (Mão)", icon: "fa-cat" },
-    { name: "Rồng (Thìn)", icon: "fa-dragon" }, { name: "Rắn (Tỵ)", icon: "fa-worm" },
-    { name: "Ngựa (Ngọ)", icon: "fa-horse" }, { name: "Dê (Mùi)", icon: "fa-horse-head" }
+    { name: "Khỉ ", icon: "fa-cat" }, { name: "Gà ", icon: "fa-crow" },
+    { name: "Chó ", icon: "fa-dog" }, { name: "Heo ", icon: "fa-piggy-bank" },
+    { name: "Chuột ", icon: "fa-mouse" }, { name: "Trâu ", icon: "fa-hippo" },
+    { name: "Hổ ", icon: "fa-cat" }, { name: "Mèo ", icon: "fa-cat" },
+    { name: "Rồng ", icon: "fa-dragon" }, { name: "Rắn ", icon: "fa-worm" },
+    { name: "Ngựa ", icon: "fa-horse" }, { name: "Dê ", icon: "fa-horse-head" }
 ];
 
 // Bài tập được nâng cấp: Có XP và Level
@@ -111,10 +111,9 @@ function loadUserData() {
     db.ref('users/' + currentUser.uid).once('value').then((snapshot) => {
         const data = snapshot.val();
         if (!data) {
-            openSetupModal(true); // true = Bắt buộc nhập (không tắt được)
+            openSetupModal(true); 
         } else {
             userData = data;
-            // Di cư dữ liệu cũ nếu chưa có Level (dành cho user cũ)
             if(!userData.level) { 
                 userData.level = 1; 
                 userData.currentXP = 0; 
@@ -142,12 +141,12 @@ function openSetupModal(isForce = false) {
     new bootstrap.Modal(modalEl, options).show();
 }
 
+
 function openEditProfile() {
     if (!userData) return;
 
     document.getElementById('inp-name').value = userData.name || "";
     document.getElementById('inp-year').value = userData.birthYear || "";
-    
     document.getElementById('inp-height').value = (userData.height * 100) || ""; 
     document.getElementById('inp-weight').value = userData.startWeight || "";
     openSetupModal(false);
@@ -156,7 +155,7 @@ function openEditProfile() {
 function saveUserProfile() {
     const name = document.getElementById('inp-name').value;
     const year = parseInt(document.getElementById('inp-year').value);
-    const h = parseFloat(document.getElementById('inp-height').value) / 100; // Đổi cm sang m
+    const h = parseFloat(document.getElementById('inp-height').value) / 100; 
     const w = parseFloat(document.getElementById('inp-weight').value);
 
     if (!name || !year || !h || !w) { alert("Vui lòng nhập đủ!"); return; }
@@ -166,17 +165,15 @@ function saveUserProfile() {
 
     // CẬP NHẬT DỮ LIỆU
     userData = {
-        ...userData, // 1. Giữ lại dữ liệu cũ (Level, XP, Streak...) TRƯỚC
+        ...userData, 
         
-        // 2. Ghi đè thông tin mới nhập VÀO SAU
         name: name, 
         birthYear: year, 
         height: h, 
         startWeight: w, 
         bmi: bmi,
         petType: zodiacIndex,
-        
-        // 3. Đảm bảo các chỉ số game không bị mất (nếu chưa có thì tạo mới)
+
         level: userData.level || 1, 
         currentXP: userData.currentXP || 0, 
         maxXP: userData.maxXP || 100,
@@ -187,7 +184,6 @@ function saveUserProfile() {
 
     saveToDB();
     
-    // Đóng modal sau khi lưu
     const modalEl = document.getElementById('setupModal');
     const modalInstance = bootstrap.Modal.getInstance(modalEl);
     if (modalInstance) modalInstance.hide();
@@ -285,7 +281,7 @@ function renderExercises() {
     });
 }
 
-// 6. LOGIC TẬP LUYỆN 
+// 6. LOGIC TẬP LUYỆN (WORKOUT)
 
 function openWorkout(id) {
     currentEx = EXERCISES.find(e => e.id === id);
@@ -361,7 +357,131 @@ function addXP(amount) {
         alert(`🎉 CHÚC MỪNG! Pet đã lên cấp ${userData.level}!`);
     }
 }
+// ============================================================
+// 5. TÍNH NĂNG CHẠY BỘ VỚI MAP (LEAFLET)
+// ============================================================
 
+let map, jogPath, jogMarker;
+let watchId = null;
+let totalDistance = 0; // Đơn vị: mét
+let lastLat = null, lastLng = null;
+
+// Hàm mở chế độ chạy bộ
+function startJoggingMode() {
+    // Ẩn màn hình chính, hiện màn hình chạy
+    document.getElementById('app-screen').classList.add('d-none');
+    document.getElementById('jogging-screen').classList.remove('d-none');
+
+    // Reset chỉ số
+    totalDistance = 0;
+    lastLat = null; lastLng = null;
+    updateJogStats();
+
+    // Khởi tạo bản đồ (nếu chưa có)
+    if (!map) {
+        map = L.map('map').setView([10.762622, 106.660172], 16); // Mặc định HCM
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+    }
+    
+    // Tạo đường vẽ quãng đường (Polyline)
+    if(jogPath) map.removeLayer(jogPath);
+    jogPath = L.polyline([], {color: 'blue', weight: 5}).addTo(map);
+
+    // Bắt đầu theo dõi GPS
+    if (navigator.geolocation) {
+        watchId = navigator.geolocation.watchPosition(
+            updatePosition, 
+            (err) => alert("Lỗi GPS: " + err.message), 
+            { enableHighAccuracy: true } // Yêu cầu chính xác cao
+        );
+    } else {
+        alert("Thiết bị không hỗ trợ GPS!");
+        stopJogging();
+    }
+}
+
+// Hàm cập nhật vị trí khi di chuyển
+function updatePosition(position) {
+    const lat = position.coords.latitude;
+    const lng = position.coords.longitude;
+
+    // 1. Vẽ marker vị trí hiện tại
+    if (!jogMarker) {
+        jogMarker = L.marker([lat, lng]).addTo(map);
+    } else {
+        jogMarker.setLatLng([lat, lng]);
+    }
+    
+    // Center map vào người dùng
+    map.setView([lat, lng]);
+
+    // 2. Tính khoảng cách
+    if (lastLat != null) {
+        // Công thức tính khoảng cách giữa 2 điểm GPS
+        const dist = map.distance([lastLat, lastLng], [lat, lng]);
+        
+        // Chỉ cộng nếu di chuyển đáng kể (> 2 mét) để tránh GPS nhảy lung tung khi đứng yên
+        if (dist > 2) {
+            totalDistance += dist;
+            // Vẽ thêm đường vào bản đồ
+            jogPath.addLatLng([lat, lng]);
+        }
+    }
+
+    lastLat = lat;
+    lastLng = lng;
+    updateJogStats();
+}
+
+// Hàm hiển thị số liệu lên màn hình
+function updateJogStats() {
+    // Giả sử 1 bước chân trung bình = 0.7 mét
+    const steps = Math.floor(totalDistance / 0.7);
+    
+    // Quy tắc: 100 bước = 10 XP => 10 bước = 1 XP
+    const xpEarned = Math.floor(steps / 10); 
+
+    document.getElementById('jog-distance').innerText = Math.floor(totalDistance) + "m";
+    document.getElementById('jog-steps').innerText = steps;
+    document.getElementById('jog-xp').innerText = "+" + xpEarned;
+}
+
+// Hàm kết thúc chạy
+function stopJogging() {
+    // 1. Dừng theo dõi GPS
+    if (watchId) navigator.geolocation.clearWatch(watchId);
+
+    // 2. Tính toán phần thưởng
+    const steps = Math.floor(totalDistance / 0.7);
+    const xpEarned = Math.floor(steps / 10);
+
+    if (xpEarned > 0) {
+        // Cộng XP vào hồ sơ chính
+        userData.currentXP += xpEarned;
+        userData.totalMinutes += Math.floor(steps / 100); // Tạm tính thời gian tích lũy
+        
+        // Kiểm tra lên cấp
+        if (userData.currentXP >= userData.maxXP) {
+            userData.level++;
+            userData.currentXP = userData.currentXP - userData.maxXP;
+            userData.maxXP = Math.floor(userData.maxXP * 1.2);
+            alert(`🎉 CHÚC MỪNG! Bạn đã chạy được ${steps} bước và lên Level ${userData.level}!`);
+        } else {
+            alert(`🏃 Kết thúc chạy! Bạn nhận được ${xpEarned} XP từ ${steps} bước chân.`);
+        }
+        
+        saveToDB(); // Lưu vào Firebase
+        renderUI(); // Cập nhật giao diện chính
+    } else {
+        alert("Bạn chưa chạy đủ để nhận quà!");
+    }
+
+    // 3. Quay về màn hình chính
+    document.getElementById('jogging-screen').classList.add('d-none');
+    document.getElementById('app-screen').classList.remove('d-none');
+}
 // 7. LOGIC KIỂM TRA SỨC KHỎE (HEALTH CHECK)
 
 function openHealthCheck() {
@@ -464,5 +584,4 @@ function goToStep(stepId) {
         document.getElementById(id).classList.add('d-none');
     });
     document.getElementById(stepId).classList.remove('d-none');
-
 }
