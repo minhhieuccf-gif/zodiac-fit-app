@@ -7,6 +7,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
         body { font-family: 'Nunito', sans-serif; background-color: #f0f2f5; }
@@ -45,7 +47,7 @@
             </button>
         </div>
 
-        <div id="app-screen" class="d-none">
+
            <div class="bg-success text-white p-3 d-flex justify-content-between align-items-center">
     <span class="fw-bold"><i class="fas fa-paw"></i> Zodiac Fit</span>
     <div>
@@ -102,6 +104,32 @@
                                 <h6 class="fw-bold mb-0"><i class="fas fa-user-md me-2"></i>Kiểm tra Sức khỏe</h6>
                                 <small class="text-white-50">Đo thị lực • Hít đất • Phổi</small>
                             </div>
+                                    <div id="app-screen" class="d-none">
+         <button class="btn btn-info w-100 mt-2 text-white fw-bold" onclick="startJoggingMode()">
+    <i class="fas fa-running"></i> CHẠY BỘ NGOÀI TRỜI</button>
+            <div id="jogging-screen" class="d-none vh-100 bg-white position-relative">
+    <div id="map" style="height: 70vh; width: 100%;"></div>
+
+    <div class="p-3 bg-light border-top" style="height: 30vh;">
+        <div class="d-flex justify-content-between mb-3">
+            <div class="text-center">
+                <h3 class="fw-bold mb-0" id="jog-distance">0m</h3>
+                <small class="text-muted">Khoảng cách</small>
+            </div>
+            <div class="text-center">
+                <h3 class="fw-bold text-success mb-0" id="jog-steps">0</h3>
+                <small class="text-muted">Bước chân</small>
+            </div>
+            <div class="text-center">
+                <h3 class="fw-bold text-warning mb-0" id="jog-xp">+0</h3>
+                <small class="text-muted">XP Nhận</small>
+            </div>
+        </div>
+        <button onclick="stopJogging()" class="btn btn-danger w-100 py-3 fw-bold">
+            <i class="fas fa-stop-circle"></i> KẾT THÚC & NHẬN QUÀ
+        </button>
+    </div>
+</div>
                             <i class="fas fa-chevron-right"></i>
                         </button>
                     </div>
@@ -174,6 +202,7 @@
                     <h5 class="modal-title"><i class="fas fa-stethoscope"></i> Phòng khám Pet</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
+                
                 <div class="modal-body text-center">
                     
                     <div id="step-vision">
