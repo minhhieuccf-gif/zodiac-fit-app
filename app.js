@@ -531,6 +531,232 @@ function stopJogging() {
     document.getElementById('jogging-screen').classList.add('d-none');
     document.getElementById('app-screen').classList.remove('d-none');
 }
+// ============================================================
+// 8. TÍNH NĂNG KIỂM TRA THỊ LỰC (AI VOICE)
+// ============================================================
+
+let visionState = {
+    step: 1, // 1: Cận, 2: Loạn, 3: Mù màu
+    subStep: 0, // Cấp độ hiện tại (chữ to -> nhỏ)
+    score: 0,
+    errors: 0,
+    recognition: null,
+    currentAnswer: ""
+};
+
+// Dữ liệu Test Cận/Loạn (Cỡ chữ giảm dần)
+const VISUAL_LEVELS = [
+    { size: "120px", score: "1/10" },
+    { size: "100px", score: "2/10" },
+    { size: "80px", score: "3/10" },
+    { size: "60px", score: "5/10" },
+    { size: "40px", score: "7/10" },
+    { size: "20px", score: "9/10" },
+    { size: "10px", score: "10/10" } // Rất nhỏ
+];
+
+// Dữ liệu Test Mù màu (URL ảnh Ishihara)
+const COLOR_TESTS = [
+    { img: "https://upload.wikimedia.org/wikipedia/commons/e/e0/Ishihara_9.png", ans: "74" }, // Số 74
+    { img: "https://upload.wikimedia.org/wikipedia/commons/b/b1/Ishihara_1.png", ans: "12" }, // Số 12
+    { img: "https://upload.wikimedia.org/wikipedia/commons/9/9e/Ishihara_2.png", ans: "8" }   // Số 8
+];
+
+function startVisionTest() {
+    // Kiểm tra trình duyệt có hỗ trợ giọng nói không
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert("Trình duyệt của bạn không hỗ trợ nhận diện giọng nói. Hãy dùng Chrome trên Android hoặc Safari trên iOS.");
+        return;
+    }
+
+    // Ẩn màn hình chính, hiện màn hình test
+    document.getElementById('app-screen').classList.add('d-none');
+    document.getElementById('vision-screen').classList.remove('d-none');
+
+    // Khởi tạo Micro
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    visionState.recognition = new SpeechRecognition();
+    visionState.recognition.lang = 'vi-VN'; // Nghe tiếng Việt
+    visionState.recognition.continuous = false;
+    visionState.recognition.interimResults = false;
+
+    visionState.recognition.onresult = handleVoiceResult;
+    visionState.recognition.onend = () => { 
+        // Tự động bật lại mic nếu chưa xong bài
+        if(document.getElementById('vision-screen').classList.contains('d-none') === false) {
+             visionState.recognition.start();
+        }
+    };
+
+    // Bắt đầu Bài 1
+    startTestPhase1();
+}
+
+// --- BÀI 1: KIỂM TRA CẬN (2 MẮT) ---
+function startTestPhase1() {
+    visionState.step = 1;
+    visionState.subStep = 0;
+    visionState.errors = 0;
+    
+    document.getElementById('vision-title').innerText = "BÀI 1: KIỂM TRA CẬN THỊ";
+    document.getElementById('vision-instruction').innerText = "Giữ điện thoại cách 40-50cm. Đọc to chữ cái bạn thấy!";
+    document.getElementById('test-img').classList.add('d-none');
+    document.getElementById('test-char').classList.remove('d-none');
+    
+    nextLetter();
+    try { visionState.recognition.start(); } catch(e){}
+}
+
+// --- BÀI 2: KIỂM TRA LOẠN (CHE 1 MẮT) ---
+function startTestPhase2(eye) {
+    visionState.step = 2; // Đánh dấu đang ở bài 2
+    visionState.subStep = 0;
+    visionState.errors = 0;
+    
+    // Bài 2 này mình làm đơn giản: Check mắt trái trước
+    if (eye === 'left') {
+        alert("BÀI 2: LOẠN THỊ\nHãy lấy tay CHE MẮT TRÁI, chỉ nhìn bằng mắt phải.");
+        document.getElementById('vision-title').innerText = "BÀI 2A: CHE MẮT TRÁI";
+    } else {
+        alert("Giỏi lắm! Giờ hãy CHE MẮT PHẢI, chỉ nhìn bằng mắt trái.");
+        document.getElementById('vision-title').innerText = "BÀI 2B: CHE MẮT PHẢI";
+    }
+    
+    nextLetter();
+}
+
+// --- BÀI 3: KIỂM TRA MÙ MÀU ---
+function startTestPhase3() {
+    visionState.step = 3;
+    visionState.subStep = 0;
+    visionState.errors = 0;
+
+    document.getElementById('vision-title').innerText = "BÀI 3: MÙ MÀU";
+    document.getElementById('vision-instruction').innerText = "Đọc to con số bạn thấy trong vòng tròn màu.";
+    
+    document.getElementById('test-char').classList.add('d-none');
+    document.getElementById('test-img').classList.remove('d-none');
+
+    nextColorPlate();
+}
+
+// Hàm sinh chữ cái ngẫu nhiên
+function nextLetter() {
+    if (visionState.subStep >= VISUAL_LEVELS.length || visionState.errors >= 2) {
+        finishCurrentPhase();
+        return;
+    }
+
+    const level = VISUAL_LEVELS[visionState.subStep];
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const randomChar = chars[Math.floor(Math.random() * chars.length)];
+    
+    visionState.currentAnswer = randomChar;
+    
+    const charEl = document.getElementById('test-char');
+    charEl.innerText = randomChar;
+    charEl.style.fontSize = level.size;
+    
+    document.getElementById('vision-score').innerText = `Cấp độ: ${visionState.subStep + 1}/${VISUAL_LEVELS.length}`;
+}
+
+function nextColorPlate() {
+    if (visionState.subStep >= COLOR_TESTS.length) {
+        finishCurrentPhase();
+        return;
+    }
+
+    const test = COLOR_TESTS[visionState.subStep];
+    visionState.currentAnswer = test.ans;
+    document.getElementById('test-img').src = test.img;
+    
+    document.getElementById('vision-score').innerText = `Tấm số: ${visionState.subStep + 1}/3`;
+}
+
+// --- XỬ LÝ GIỌNG NÓI ---
+function handleVoiceResult(event) {
+    const transcript = event.results[0][0].transcript.trim().toUpperCase();
+    const micStatus = document.getElementById('mic-status');
+    micStatus.innerText = `Bạn nói: "${transcript}"`;
+    micStatus.className = "mb-2 text-info fw-bold";
+
+    // Xử lý logic đúng sai
+    let isCorrect = false;
+
+    // Logic so sánh (Chấp nhận nghe nhầm một chút)
+    // Ví dụ: Đọc "A" máy có thể nghe thành "A CỜ", "A HÁT"... -> Kiểm tra xem có chứa ký tự đúng không
+    if (transcript.includes(visionState.currentAnswer)) {
+        isCorrect = true;
+    }
+
+    // Hiệu ứng đúng/sai
+    const displayBox = document.getElementById('vision-display');
+    if (isCorrect) {
+        displayBox.style.border = "5px solid green";
+        setTimeout(() => displayBox.style.border = "none", 500);
+        
+        visionState.subStep++; // Tăng cấp độ
+        
+        if (visionState.step === 3) nextColorPlate();
+        else nextLetter();
+    } else {
+        displayBox.style.border = "5px solid red";
+        setTimeout(() => displayBox.style.border = "none", 500);
+        
+        visionState.errors++;
+        // Nếu sai 2 lần liên tiếp ở bài cận/loạn -> Dừng test
+        if (visionState.step !== 3 && visionState.errors >= 2) {
+            finishCurrentPhase();
+        } 
+        // Nếu mù màu thì cứ cho qua bài tiếp
+        else if (visionState.step === 3) {
+            visionState.subStep++;
+            nextColorPlate();
+        }
+    }
+}
+
+function finishCurrentPhase() {
+    if (visionState.step === 1) {
+        // Xong bài Cận -> Sang bài Loạn (Mắt phải)
+        let result = VISUAL_LEVELS[Math.max(0, visionState.subStep - 1)].score;
+        alert(`KẾT QUẢ BÀI 1:\nThị lực 2 mắt: ${result}.\n\n(Ước tính: Nếu dưới 5/10 bạn có thể đang cận khoảng 1-2 độ).`);
+        startTestPhase2('left');
+    } 
+    else if (visionState.step === 2) {
+        // Đang check mắt phải (Che trái) -> Chuyển sang check trái (Che phải)
+        if (document.getElementById('vision-title').innerText.includes("TRÁI")) {
+             startTestPhase2('right');
+        } else {
+             alert("Xong phần kiểm tra Loạn thị! Chuyển sang kiểm tra Mù màu.");
+             startTestPhase3();
+        }
+    }
+    else if (visionState.step === 3) {
+        // Xong hết
+        const total = COLOR_TESTS.length;
+        const correct = visionState.subStep - visionState.errors;
+        
+        // Hiện kết quả tổng kết đẹp
+        let msg = "";
+        if (correct === total) msg = "Mắt bạn nhìn màu rất tốt!";
+        else msg = "Bạn có dấu hiệu rối loạn sắc giác (Mù màu). Nên đi khám bác sĩ.";
+        
+        visionState.recognition.stop();
+        showRewardPopup("HOÀN THÀNH KIỂM TRA MẮT", msg);
+        
+        // Cộng XP vì đã kiểm tra sức khỏe
+        addXP(50);
+        
+        closeVisionTest();
+    }
+}
+
+function closeVisionTest() {
+    if(visionState.recognition) visionState.recognition.stop();
+    document.getElementById('vision-screen').classList.add('d-none');
+    document.getElementById('app-screen').classList.remove('d-none');
+}
 // 7. LOGIC KIỂM TRA SỨC KHỎE (HEALTH CHECK)
 
 function openHealthCheck() {
