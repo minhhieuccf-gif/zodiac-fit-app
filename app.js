@@ -28,36 +28,31 @@ const ZODIAC_ANIMALS = [
 ];
 
 // Bài tập được nâng cấp: Có XP và Level
+// DANH SÁCH BÀI TẬP (Đã cập nhật mới)
 const EXERCISES = [
     { 
-        id: 'e1', type: 'beginner', name: "Khởi động nhẹ", 
-        xp: 10, time: 60, 
-        desc: "Xoay khớp cổ tay, chân, vươn vai. Giúp Pet tỉnh ngủ!", 
+        id: 'e1', type: 'cardio', name: "Chạy Nâng Cao Đùi", 
+        xp: 15, time: 30, 
+        desc: "Đứng thẳng, chạy tại chỗ và nâng đùi cao ngang hông, giữ nhịp thở đều.", 
         img: "https://media.giphy.com/media/l2JhvASuBqgC4c9fG/giphy.gif" 
     },
     { 
-        id: 'e2', type: 'strength', name: "Hít đất cơ bản", 
-        xp: 20, time: 45, 
-        desc: "Thực hiện 2 hiệp, mỗi hiệp 10 cái. Nghỉ giữa hiệp 5s.", 
+        id: 'e2', type: 'strength', name: "Chống Đẩy (Push-Up)", 
+        xp: 20, time: 20, 
+        desc: "Nằm sấp, chống tay, hạ thấp người đến khi ngực gần chạm đất rồi đẩy lên.", 
         img: "https://media.giphy.com/media/KHM1e9f1a0T8k/giphy.gif" 
     },
     { 
-        id: 'e3', type: 'cardio', name: "Chạy nâng cao đùi", 
-        xp: 25, time: 60, 
-        desc: "Chạy tại chỗ tốc độ cao. Đốt cháy năng lượng cho Pet!", 
-        img: "https://media.giphy.com/media/l3q2Q3sUEkEqgAn28/giphy.gif" 
+        id: 'e3', type: 'strength', name: "Squats & Lunges", 
+        xp: 25, time: 40, 
+        desc: "Kết hợp: Hạ người như ngồi ghế (Squat) + Bước chân gập gối (Lunge).", 
+        img: "https://media.giphy.com/media/10HvUaG0nF93Bm/giphy.gif" 
     },
     { 
-        id: 'e4', type: 'yoga', name: "Rắn hổ mang", 
-        xp: 15, time: 60, 
-        desc: "Giãn cơ lưng. Giữ nhịp thở đều. Rất tốt cho cột sống.", 
-        img: "https://media.giphy.com/media/3oKIPuE14D3yg5C65y/giphy.gif" 
-    },
-    { 
-        id: 'e5', type: 'fullbody', name: "Burpees (Địa ngục)", 
-        xp: 40, time: 45, 
-        desc: "Bài tập vua! Kết hợp hít đất và bật nhảy. Pet sẽ lên cấp rất nhanh!", 
-        img: "https://media.giphy.com/media/l3vRaWp5lLCv49XBC/giphy.gif" 
+        id: 'e4', type: 'fullbody', name: "Plank & Biến Thể", 
+        xp: 30, time: 45, 
+        desc: "Chống khuỷu tay, siết cơ bụng, giữ thẳng lưng. Thử nghiêng người nếu được.", 
+        img: "https://media.giphy.com/media/xT5LMyTvq0Kx2cCNMc/giphy.gif" 
     }
 ];
 
@@ -65,7 +60,8 @@ let currentUser = null;
 let userData = {};
 let timerInterval = null;
 let currentEx = null;
-
+// Biến quản lý Modal tập luyện để khóa/mở
+let workoutModalInstance = null;
 // Biến cho phần Test Sức Khỏe
 let healthData = { visionScore: 0, pushups: 0, lungTime: 0 };
 let currentVisionIndex = 0;
@@ -282,23 +278,46 @@ function renderExercises() {
 }
 
 // 6. LOGIC TẬP LUYỆN (WORKOUT)
+// --- HÀM MỚI: Hiện bảng thông báo đẹp thay cho alert ---
+function showRewardPopup(title, message) {
+    document.getElementById('reward-title').innerText = title;
+    document.getElementById('reward-msg').innerText = message;
+    
+    const modalEl = document.getElementById('rewardModal');
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+}
 
 function openWorkout(id) {
     currentEx = EXERCISES.find(e => e.id === id);
     if(!currentEx) return;
 
+    // 1. Điền thông tin vào Modal
     document.getElementById('ex-title').innerText = currentEx.name;
     document.getElementById('ex-desc').innerText = currentEx.desc;
     document.getElementById('ex-img').src = currentEx.img;
     document.getElementById('ex-badge').innerText = `Thưởng: +${currentEx.xp} XP`;
-    document.getElementById('timer-display').innerText = `00:${currentEx.time}`;
     
+    // Reset đồng hồ hiển thị
+    const display = document.getElementById('timer-display');
+    display.innerText = `00:${currentEx.time}`;
+    display.className = "display-1 fw-bold text-success my-3"; 
+
+    // 2. Reset trạng thái nút bấm
+    resetWorkoutButton();
+
+    // 3. Mở Modal (Chế độ static: không tắt khi bấm ra ngoài)
+    const modalEl = document.getElementById('workoutModal');
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: 'static', keyboard: false });
+    modal.show();
+}
+
+function resetWorkoutButton() {
     const btn = document.getElementById('btn-action');
     btn.innerText = "Bắt đầu tập";
-    btn.disabled = false;
+    btn.className = "btn btn-primary btn-lg w-100 rounded-pill";
     btn.onclick = startTimer;
-
-    new bootstrap.Modal(document.getElementById('workoutModal')).show();
+    btn.disabled = false;
 }
 
 function startTimer() {
@@ -306,15 +325,22 @@ function startTimer() {
     const display = document.getElementById('timer-display');
     let timeLeft = currentEx.time;
 
-    btn.disabled = true;
-    btn.innerText = "Đang tập... Cố lên!";
-    
+    // Đổi nút thành "Hủy"
+    btn.innerText = "⛔ Dừng & Thoát (Không tính điểm)";
+    btn.className = "btn btn-outline-danger btn-lg w-100 rounded-pill"; 
+    btn.onclick = cancelWorkout;
+
     if(timerInterval) clearInterval(timerInterval);
     
     timerInterval = setInterval(() => {
         timeLeft--;
         display.innerText = `00:${timeLeft < 10 ? '0'+timeLeft : timeLeft}`;
         
+        if(timeLeft < 10) {
+            display.classList.remove('text-success');
+            display.classList.add('text-danger');
+        }
+
         if (timeLeft <= 0) {
             clearInterval(timerInterval);
             finishWorkout();
@@ -322,15 +348,38 @@ function startTimer() {
     }, 1000);
 }
 
+function cancelWorkout() {
+    if(timerInterval) clearInterval(timerInterval);
+
+    const confirmQuit = confirm("Bạn chưa tập xong! Thoát bây giờ sẽ không có điểm đâu 😢");
+    
+    if (confirmQuit) {
+        const modalEl = document.getElementById('workoutModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if(modal) modal.hide();
+        resetWorkoutButton();
+    } else {
+        startTimer(); // Nếu không thoát thì đếm lại (hoặc giữ nguyên tùy logic)
+    }
+}
+
 function finishWorkout() {
-    // 1. Cộng chỉ số
+    if(timerInterval) clearInterval(timerInterval);
+
+    // 1. Đóng Modal Bài tập trước
+    const modalEl = document.getElementById('workoutModal');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    if(modal) modal.hide();
+
+    resetWorkoutButton();
+
+    // 2. Cộng thời gian & Điểm
     if(!userData.totalMinutes) userData.totalMinutes = 0;
-    userData.totalMinutes += Math.floor(currentEx.time / 60) + 1; // Làm tròn phút
+    userData.totalMinutes += Math.ceil(currentEx.time / 60); 
     
-    // 2. Cộng XP
-    addXP(currentEx.xp);
+    addXP(currentEx.xp); // Gọi hàm cộng điểm
     
-    // 3. Update Streak
+    // Update Streak
     const now = new Date();
     const last = new Date(userData.lastLogin || 0);
     if(now.getDate() !== last.getDate()) {
@@ -341,25 +390,35 @@ function finishWorkout() {
     saveToDB();
     renderUI();
     
-    const modalEl = document.getElementById('workoutModal');
-    const modalInstance = bootstrap.Modal.getInstance(modalEl);
-    if(modalInstance) modalInstance.hide();
-    
-    alert(`Tuyệt vời! Bạn nhận được ${currentEx.xp} XP.`);
+    // 3. HIỆN BẢNG CHÚC MỪNG MỚI (Thay vì alert)
+    // Dùng setTimeout nhỏ để modal cũ tắt hẳn thì modal mới hiện lên cho mượt
+    setTimeout(() => {
+        showRewardPopup("HOÀN THÀNH!", `Bạn vừa tập xong bài "${currentEx.name}"\nPhần thưởng: +${currentEx.xp} XP`);
+    }, 300);
 }
 
+// --- HÀM CỘNG XP (QUAN TRỌNG: Đừng xóa hàm này) ---
 function addXP(amount) {
+    if (!userData.currentXP) userData.currentXP = 0;
+    if (!userData.maxXP) userData.maxXP = 100;
+    if (!userData.level) userData.level = 1;
+
     userData.currentXP += amount;
+
+    // Logic lên cấp
     if(userData.currentXP >= userData.maxXP) {
-        userData.currentXP -= userData.maxXP;
+        userData.currentXP = userData.currentXP - userData.maxXP;
         userData.level++;
-        userData.maxXP = Math.floor(userData.maxXP * 1.2); // Tăng độ khó
-        alert(`🎉 CHÚC MỪNG! Pet đã lên cấp ${userData.level}!`);
+        userData.maxXP = Math.floor(userData.maxXP * 1.2); 
+        
+        // Hiện thông báo Lên cấp (Sau thông báo tập luyện 1 chút)
+        setTimeout(() => {
+            showRewardPopup("LÊN CẤP ĐỘ MỚI! 🌟", `Chúc mừng! Pet đã đạt Level ${userData.level}.\nSức mạnh đã tăng cường!`);
+        }, 2000); // Hiện sau 2 giây để người dùng đọc xong cái thông báo tập luyện đã
     }
 }
-// ============================================================
 // 5. TÍNH NĂNG CHẠY BỘ VỚI MAP (LEAFLET)
-// ============================================================
+
 
 let map, jogPath, jogMarker;
 let watchId = null;
@@ -450,35 +509,25 @@ function updateJogStats() {
 
 // Hàm kết thúc chạy
 function stopJogging() {
-    // 1. Dừng theo dõi GPS
     if (watchId) navigator.geolocation.clearWatch(watchId);
 
-    // 2. Tính toán phần thưởng
     const steps = Math.floor(totalDistance / 0.7);
     const xpEarned = Math.floor(steps / 10);
 
     if (xpEarned > 0) {
-        // Cộng XP vào hồ sơ chính
-        userData.currentXP += xpEarned;
-        userData.totalMinutes += Math.floor(steps / 100); // Tạm tính thời gian tích lũy
+        addXP(xpEarned);
+        userData.totalMinutes += Math.floor(steps / 100);
         
-        // Kiểm tra lên cấp
-        if (userData.currentXP >= userData.maxXP) {
-            userData.level++;
-            userData.currentXP = userData.currentXP - userData.maxXP;
-            userData.maxXP = Math.floor(userData.maxXP * 1.2);
-            alert(`🎉 CHÚC MỪNG! Bạn đã chạy được ${steps} bước và lên Level ${userData.level}!`);
-        } else {
-            alert(`🏃 Kết thúc chạy! Bạn nhận được ${xpEarned} XP từ ${steps} bước chân.`);
-        }
-        
-        saveToDB(); // Lưu vào Firebase
-        renderUI(); // Cập nhật giao diện chính
+        saveToDB();
+        renderUI();
+
+        // Thay alert bằng Popup mới
+        showRewardPopup("KẾT THÚC CHẠY BỘ", `Quãng đường: ${Math.floor(totalDistance)}m\nSố bước: ${steps}\nPhần thưởng: +${xpEarned} XP`);
+
     } else {
-        alert("Bạn chưa chạy đủ để nhận quà!");
+        alert("Bạn chưa chạy đủ để nhận quà!"); // Cái này giữ alert thường hoặc dùng popup tùy bạn
     }
 
-    // 3. Quay về màn hình chính
     document.getElementById('jogging-screen').classList.add('d-none');
     document.getElementById('app-screen').classList.remove('d-none');
 }
